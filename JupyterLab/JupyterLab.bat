@@ -1,4 +1,5 @@
 @echo off
+REM Documento de comando de acceso rapido .bat / Script-editable document quick access .bat execution 
 Color 02
 mode con: cols=150 lines=150
 Title Jupyter Caverna Studio
