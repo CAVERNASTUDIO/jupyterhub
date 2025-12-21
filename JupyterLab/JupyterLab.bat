@@ -11,5 +11,3 @@ echo Copyright (c) Jupyter Development Team.
 echo Distributed under the terms of the Modified BSD License.
 jupyter lab
 pause
-
-
