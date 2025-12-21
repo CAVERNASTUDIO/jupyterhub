@@ -1,6 +1,6 @@
 ---
 
-# 📋 Tabla de formatos de texto legibles en Jupyter
+# Tabla de formatos de texto legibles en Jupyter
 
 | Formato | Extensión | Estructura | Ejemplo de lectura en Jupyter (Python) |
 |---------|-----------|------------|----------------------------------------|
@@ -83,4 +83,5 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
+
 
