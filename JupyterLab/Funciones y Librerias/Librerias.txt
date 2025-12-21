@@ -1,0 +1,195 @@
+---
+
+#  Tabla de widgets en `ipywidgets`
+
+| Widget | Descripción | Declaración sencilla |
+|--------|-------------|----------------------|
+| **IntSlider** | Slider para valores enteros | `widgets.IntSlider(value=0, min=0, max=10, step=1, description="Entero:")` |
+| **FloatSlider** | Slider para valores decimales | `widgets.FloatSlider(value=0.0, min=0, max=1.0, step=0.1, description="Decimal:")` |
+| **IntText** | Caja de texto para números enteros | `widgets.IntText(value=5, description="Número:")` |
+| **FloatText** | Caja de texto para números decimales | `widgets.FloatText(value=3.14, description="Pi:")` |
+| **Text** | Caja de texto libre | `widgets.Text(value="Hola", description="Texto:")` |
+| **Textarea** | Área de texto multilínea | `widgets.Textarea(value="Escribe aquí...", description="Área:")` |
+| **Dropdown** | Menú desplegable | `widgets.Dropdown(options=["Opción 1","Opción 2"], value="Opción 1", description="Menú:")` |
+| **RadioButtons** | Botones de selección única | `widgets.RadioButtons(options=["A","B","C"], description="Elegir:")` |
+| **Checkbox** | Casilla de verificación | `widgets.Checkbox(value=True, description="Activar")` |
+| **ToggleButton** | Botón con estado ON/OFF | `widgets.ToggleButton(value=False, description="Switch")` |
+| **Button** | Botón simple | `widgets.Button(description="Ejecutar")` |
+| **Label** | Etiqueta de texto | `widgets.Label(value="Etiqueta fija")` |
+| **Image** | Mostrar imágenes | `widgets.Image(value=open("imagen.png","rb").read(), format="png")` |
+| **Play** | Control tipo “play” para animaciones | `widgets.Play(interval=500, value=0, min=0, max=10, step=1)` |
+
+---
+---
+
+#  Tabla de funciones principales de NumPy
+
+| Categoría | Función | Uso sencillo | Descripción |
+|-----------|---------|--------------|-------------|
+| **Creación de arrays** | `np.array()` | `np.array([1,2,3])` | Crea un arreglo a partir de una lista o tupla. |
+| | `np.zeros()` | `np.zeros((3,3))` | Crea un arreglo lleno de ceros. |
+| | `np.ones()` | `np.ones((2,4))` | Crea un arreglo lleno de unos. |
+| | `np.arange()` | `np.arange(0,10,2)` | Crea un rango de valores con paso definido. |
+| | `np.linspace()` | `np.linspace(0,1,5)` | Genera valores equidistantes entre dos límites. |
+| | `np.eye()` | `np.eye(3)` | Matriz identidad de tamaño \(n \times n\). |
+| **Propiedades** | `np.shape` | `arr.shape` | Devuelve las dimensiones del arreglo. |
+| | `np.size` | `arr.size` | Número total de elementos. |
+| | `np.ndim` | `arr.ndim` | Número de dimensiones. |
+| **Operaciones matemáticas** | `np.sum()` | `np.sum(arr)` | Suma de todos los elementos. |
+| | `np.mean()` | `np.mean(arr)` | Promedio de los elementos. |
+| | `np.std()` | `np.std(arr)` | Desviación estándar. |
+| | `np.min()` | `np.min(arr)` | Valor mínimo. |
+| | `np.max()` | `np.max(arr)` | Valor máximo. |
+| | `np.dot()` | `np.dot(A,B)` | Producto matricial. |
+| | `np.cross()` | `np.cross(A,B)` | Producto cruzado de vectores. |
+| | `np.linalg.inv()` | `np.linalg.inv(A)` | Inversa de una matriz. |
+| | `np.linalg.det()` | `np.linalg.det(A)` | Determinante de una matriz. |
+| **Manipulación de arrays** | `np.reshape()` | `arr.reshape(2,3)` | Cambia la forma del arreglo. |
+| | `np.transpose()` | `arr.T` | Transpone una matriz. |
+| | `np.concatenate()` | `np.concatenate([A,B])` | Une arrays en una dimensión. |
+| | `np.hstack()` | `np.hstack([A,B])` | Une arrays horizontalmente. |
+| | `np.vstack()` | `np.vstack([A,B])` | Une arrays verticalmente. |
+| **Aleatorios** | `np.random.rand()` | `np.random.rand(3,3)` | Matriz con valores aleatorios uniformes [0,1]. |
+| | `np.random.randn()` | `np.random.randn(3,3)` | Valores aleatorios con distribución normal. |
+| | `np.random.randint()` | `np.random.randint(0,10,(3,3))` | Enteros aleatorios en un rango. |
+
+-----------------------
+---
+
+#  Tabla de funciones principales de `control`
+
+| Función | Uso sencillo | Descripción |
+|---------|--------------|-------------|
+| **TransferFunction()** | `ctrl.TransferFunction([1],[1,2,1])` | Define una función de transferencia \(G(s)\) a partir de coeficientes de numerador y denominador. |
+| **StateSpace()** | `ctrl.StateSpace(A,B,C,D)` | Define un sistema en espacio de estados con matrices \(A,B,C,D\). |
+| **step_response()** | `t,y = ctrl.step_response(sys)` | Calcula la respuesta al escalón unitario de un sistema. |
+| **impulse_response()** | `t,y = ctrl.impulse_response(sys)` | Calcula la respuesta al impulso de un sistema. |
+| **forced_response()** | `t,y,x = ctrl.forced_response(sys, T, U)` | Simula la respuesta de un sistema a una entrada arbitraria \(U(t)\). |
+| **bode_plot()** | `ctrl.bode_plot(sys)` | Genera el diagrama de Bode (magnitud y fase vs frecuencia). |
+| **nyquist_plot()** | `ctrl.nyquist_plot(sys)` | Genera el diagrama de Nyquist para análisis de estabilidad. |
+| **root_locus()** | `ctrl.root_locus(sys)` | Traza el lugar de las raíces del sistema. |
+| **pole()** | `ctrl.pole(sys)` | Devuelve los polos del sistema. |
+| **zero()** | `ctrl.zero(sys)` | Devuelve los ceros del sistema. |
+| **feedback()** | `ctrl.feedback(G,H)` | Crea un sistema en lazo cerrado con función de transferencia \(G/(1+GH)\). |
+| **series()** | `ctrl.series(G1,G2)` | Conecta dos sistemas en serie. |
+| **parallel()** | `ctrl.parallel(G1,G2)` | Conecta dos sistemas en paralelo. |
+| **lsim()** | `t,y,x = ctrl.lsim(sys, U, T)` | Simula la respuesta de un sistema a una entrada definida por el usuario. |
+
+---
+
+## Ejemplo rápido en Jupyter
+```python
+import control as ctrl
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Definir sistema G(s) = 5 / (s + 2)
+sys = ctrl.TransferFunction([5],[1,2])
+
+# Respuesta al escalón
+t, y = ctrl.step_response(sys)
+plt.plot(t, y)
+plt.title("Respuesta al escalón de G(s) = 5/(s+2)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Salida")
+plt.grid(True)
+plt.show()
+```
+---------------------------------------------
+---
+
+# Tabla de funciones principales de Matplotlib (`matplotlib.pyplot`)
+
+| Categoría | Función | Uso sencillo | Descripción |
+|-----------|---------|--------------|-------------|
+| **Creación de gráficos** | `plt.plot()` | `plt.plot(x, y)` | Grafica líneas simples (x vs y). |
+| | `plt.scatter()` | `plt.scatter(x, y)` | Grafica puntos dispersos (scatter plot). |
+| | `plt.bar()` | `plt.bar(x, y)` | Grafica barras verticales. |
+| | `plt.barh()` | `plt.barh(x, y)` | Grafica barras horizontales. |
+| | `plt.hist()` | `plt.hist(datos, bins=10)` | Histograma de frecuencias. |
+| | `plt.pie()` | `plt.pie(valores)` | Gráfico circular (pie chart). |
+| **Configuración de gráficos** | `plt.title()` | `plt.title("Título")` | Añade título al gráfico. |
+| | `plt.xlabel()` | `plt.xlabel("Eje X")` | Etiqueta del eje X. |
+| | `plt.ylabel()` | `plt.ylabel("Eje Y")` | Etiqueta del eje Y. |
+| | `plt.legend()` | `plt.legend()` | Muestra la leyenda de las series. |
+| | `plt.grid()` | `plt.grid(True)` | Activa la cuadrícula. |
+| | `plt.axis()` | `plt.axis([xmin, xmax, ymin, ymax])` | Define límites de los ejes. |
+| **Estilo y formato** | `plt.style.use()` | `plt.style.use("ggplot")` | Aplica un estilo predefinido. |
+| | `plt.figure()` | `plt.figure(figsize=(8,5))` | Crea una nueva figura con tamaño definido. |
+| | `plt.subplot()` | `plt.subplot(2,1,1)` | Divide la figura en subgráficos. |
+| | `plt.subplots()` | `fig, ax = plt.subplots()` | Crea figura y ejes para control avanzado. |
+| **Guardado y visualización** | `plt.savefig()` | `plt.savefig("grafico.png", dpi=300)` | Guarda el gráfico en archivo con resolución definida. |
+| | `plt.show()` | `plt.show()` | Muestra el gráfico en pantalla (necesario en Jupyter). |
+
+---
+
+## Ejemplo rápido en Jupyter
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+plt.figure(figsize=(8,5))
+plt.plot(x, y, label="Seno")
+plt.title("Ejemplo con Matplotlib")
+plt.xlabel("Tiempo")
+plt.ylabel("Amplitud")
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+---
+---
+
+#  Tabla de funciones principales de `Axes3D` (Matplotlib)
+
+| Función / Método | Uso sencillo | Descripción |
+|------------------|--------------|-------------|
+| **ax.plot3D()** | `ax.plot3D(x, y, z)` | Traza una curva 3D (línea en el espacio). |
+| **ax.scatter3D()** | `ax.scatter3D(x, y, z, c=z)` | Grafica puntos dispersos en 3D con colores opcionales. |
+| **ax.bar3d()** | `ax.bar3d(x, y, z, dx, dy, dz)` | Grafica barras en 3D (útil para histogramas volumétricos). |
+| **ax.contour3D()** | `ax.contour3D(X, Y, Z, 50)` | Dibuja curvas de nivel en 3D. |
+| **ax.plot_surface()** | `ax.plot_surface(X, Y, Z, cmap="viridis")` | Grafica una superficie 3D con colores. |
+| **ax.plot_wireframe()** | `ax.plot_wireframe(X, Y, Z)` | Grafica una malla (wireframe) de la superficie. |
+| **ax.set_xlabel()** | `ax.set_xlabel("X")` | Etiqueta del eje X. |
+| **ax.set_ylabel()** | `ax.set_ylabel("Y")` | Etiqueta del eje Y. |
+| **ax.set_zlabel()** | `ax.set_zlabel("Z")` | Etiqueta del eje Z. |
+| **ax.view_init()** | `ax.view_init(elev=30, azim=45)` | Ajusta el ángulo de vista (elevación y azimut). |
+| **ax.set_xlim()** | `ax.set_xlim([xmin, xmax])` | Define límites del eje X. |
+| **ax.set_ylim()** | `ax.set_ylim([ymin, ymax])` | Define límites del eje Y. |
+| **ax.set_zlim()** | `ax.set_zlim([zmin, zmax])` | Define límites del eje Z. |
+
+---
+
+## Ejemplo rápido en Jupyter
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+# Datos
+x = np.linspace(-5, 5, 100)
+y = np.linspace(-5, 5, 100)
+X, Y = np.meshgrid(x, y)
+Z = np.sin(np.sqrt(X**2 + Y**2))
+
+# Crear figura y ejes 3D
+fig = plt.figure(figsize=(8,6))
+ax = fig.add_subplot(111, projection='3d')
+
+# Superficie
+ax.plot_surface(X, Y, Z, cmap="viridis")
+
+# Etiquetas
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_zlabel("Z")
+ax.view_init(elev=30, azim=45)
+
+plt.show()
+```
+
+---

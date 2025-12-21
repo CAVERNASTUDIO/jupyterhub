@@ -1,0 +1,86 @@
+---
+
+# 📋 Tabla de formatos de texto legibles en Jupyter
+
+| Formato | Extensión | Estructura | Ejemplo de lectura en Jupyter (Python) |
+|---------|-----------|------------|----------------------------------------|
+| **CSV (Comma-Separated Values)** | `.csv` | Valores separados por comas | `pd.read_csv("datos.csv")` |
+| **TSV (Tab-Separated Values)** | `.tsv` | Valores separados por tabuladores | `pd.read_csv("datos.tsv", sep="\t")` |
+| **TXT (Plain Text con delimitadores)** | `.txt` | Texto plano con separadores definidos | `pd.read_csv("datos.txt", sep=";")` |
+| **JSON (JavaScript Object Notation)** | `.json` | Datos estructurados en clave-valor | `pd.read_json("datos.json")` |
+| **Excel (texto tabular embebido)** | `.xlsx` / `.xls` | Hojas de cálculo con celdas | `pd.read_excel("datos.xlsx")` |
+| **HTML (tablas en páginas web)** | `.html` | Tablas dentro de documentos HTML | `pd.read_html("tabla.html")[0]` |
+
+---
+
+# Ejemplo práctico: archivo CSV
+
+Supongamos que tienes un archivo `datos.csv` con este contenido:
+
+```csv
+Nombre,Edad,Carrera
+Erik,22,Ingeniería
+Ana,21,Física
+Luis,23,Matemáticas
+```
+
+En Jupyter puedes leerlo así:
+
+```python
+import pandas as pd
+
+# Leer archivo CSV
+df = pd.read_csv("datos.csv")
+
+# Mostrar el DataFrame
+print(df)
+```
+
+ **Salida esperada:**
+```
+  Nombre  Edad      Carrera
+0   Erik    22  Ingeniería
+1    Ana    21       Física
+2   Luis    23  Matemáticas
+```
+
+---
+
+### Gráficas======================================================
+
+#  Tabla de formatos de gráficos 2D en Jupyter (Matplotlib)
+
+| Tipo de gráfico | Función en `matplotlib.pyplot` | Uso sencillo | Cuándo usarlo |
+|-----------------|--------------------------------|--------------|---------------|
+| **Gráfico de líneas** | `plt.plot(x, y)` | `plt.plot(x, y)` | Para mostrar tendencias o evolución temporal de datos. |
+| **Gráfico de dispersión (scatter)** | `plt.scatter(x, y)` | `plt.scatter(x, y)` | Para identificar correlaciones o distribución de puntos. |
+| **Gráfico de barras** | `plt.bar(x, y)` | `plt.bar(categorias, valores)` | Para comparar valores entre categorías discretas. |
+| **Gráfico de barras horizontales** | `plt.barh(x, y)` | `plt.barh(categorias, valores)` | Similar al de barras, pero horizontal. |
+| **Histograma** | `plt.hist(datos, bins=10)` | `plt.hist(datos)` | Para analizar la distribución de frecuencias de un conjunto de datos. |
+| **Gráfico circular (pie chart)** | `plt.pie(valores)` | `plt.pie(valores, labels=etiquetas)` | Para mostrar proporciones relativas de un conjunto. |
+| **Boxplot (diagrama de caja)** | `plt.boxplot(datos)` | `plt.boxplot(datos)` | Para visualizar la dispersión, mediana y valores atípicos. |
+| **Área (fill)** | `plt.fill_between(x, y)` | `plt.fill_between(x, y)` | Para mostrar acumulación o áreas bajo una curva. |
+| **Stackplot (área apilada)** | `plt.stackplot(x, y1, y2)` | `plt.stackplot(x, serie1, serie2)` | Para mostrar contribuciones acumuladas de varias series. |
+| **Heatmap (mapa de calor)** | `plt.imshow(matriz, cmap="viridis")` | `plt.imshow(matriz)` | Para visualizar datos en forma matricial con colores. |
+
+---
+
+##  Ejemplo rápido en Jupyter
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Datos de ejemplo
+x = np.linspace(0, 10, 50)
+y = np.sin(x)
+
+# Gráfico de líneas
+plt.plot(x, y, label="Seno")
+plt.title("Ejemplo de gráfico 2D")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+

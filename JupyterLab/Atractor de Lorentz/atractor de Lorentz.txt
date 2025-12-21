@@ -1,0 +1,149 @@
+# Cuadro descriptivo: Atractor de Lorenz
+| Aspecto | Descripción |
+|---------|-------------|
+| **Definición** | El atractor de Lorenz es un sistema dinámico caótico descubierto por Edward Lorenz en 1963, al estudiar modelos simplificados de la atmósfera. |
+| **Naturaleza** | Es un conjunto de trayectorias en el espacio tridimensional que nunca se repiten, pero permanecen confinadas en una región finita. Representa un ejemplo clásico de caos determinista. |
+| **Ecuaciones diferenciales** | El sistema está definido por tres ecuaciones acopladas: <br><br> \[\frac{dx}{dt} = \sigma (y - x)\] <br> \[\frac{dy}{dt} = x(\rho - z) - y\] <br> \[\frac{dz}{dt} = xy - \beta z\] |
+| **Parámetros** | - \(\sigma\): número de Prandtl (relaciona viscosidad y difusión térmica). <br> - \(\rho\): número de Rayleigh reducido (relaciona diferencia de temperatura y convección). <br> - \(\beta\): parámetro geométrico del sistema. |
+| **Valores típicos** | Lorenz usó \(\sigma = 10\), \(\rho = 28\), \(\beta = \frac{8}{3}\). Con estos valores surge el atractor caótico característico. |
+| **Figura característica** | La solución gráfica muestra dos “alas” o lóbulos que recuerdan a una mariposa. Las trayectorias oscilan entre ambos lóbulos de manera impredecible pero confinada. |
+| **Importancia** | Es un ejemplo paradigmático de cómo sistemas deterministas pueden generar comportamientos caóticos. Se usa en física, meteorología, matemáticas y teoría del caos. |
+ 
+# Modelo físico del atractor de Lorenz en convección de Rayleigh–Bénard
+
+En el modelo clásico de Lorenz (1963), las ecuaciones provienen de la convección térmica en una capa fluida calentada desde abajo (Rayleigh–Bénard). Los parámetros se relacionan con propiedades del fluido, la geometría y el gradiente térmico impuesto. Aquí se detalla qué representa cada parámetro y cómo calcular las constantes desde un experimento real.
+
+---
+
+## Sistema de ecuaciones y significado
+
+\[
+\dot{x} = \sigma (y - x), \quad
+\dot{y} = x(\rho - z) - y, \quad
+\dot{z} = xy - \beta z
+\]
+
+- **Interpretación de variables:**
+  - **x:** intensidad del modo convectivo (velocidad de circulación).
+  - **y:** contraste de temperatura horizontal del modo dominante.
+  - **z:** desviación vertical del perfil de temperatura (del equilibrio lineal).
+
+- **Naturaleza del modelo:**
+  - **Determinista:** las ecuaciones no tienen ruido; el caos emerge por no linealidad y sensibilidad a condiciones iniciales.
+  - **Truncación modal:** proviene de proyectar las ecuaciones de Boussinesq en pocos modos espaciales; por eso los parámetros incluyen geometría.
+
+---
+
+## Parámetro σ: número de Prandtl
+
+- **Definición física:**
+  
+  \[
+  \sigma = \frac{\nu}{\kappa}
+  \]
+  
+  - **\(\nu\):** viscosidad cinemática del fluido.
+  - **\(\kappa\):** difusividad térmica.
+
+- **Qué describe en el experimento:**
+  - **Relación disipación viscosa vs. difusión térmica.**
+  - **Controla la rapidez relativa** con la que se suaviza el campo de velocidad frente al campo de temperatura.
+
+- **Cómo calcularlo:**
+  - **Medir o consultar** \(\nu\) y \(\kappa\) del fluido a la temperatura de operación.
+  - **Ejemplo típico:** agua a ~25 °C, \(\nu \approx 10^{-6}\ \mathrm{m^2/s}\), \(\kappa \approx 1.4\times 10^{-7}\ \mathrm{m^2/s}\), entonces \(\sigma \approx 7.1\).
+
+---
+
+## Parámetro ρ: Rayleigh reducido (control del forzamiento térmico)
+
+- **Definición física:**
+  
+  \[
+  \rho = \frac{Ra}{Ra_c}
+  \]
+  
+  - **\(Ra\):** número de Rayleigh, mide el vigor de la convección.
+  - **\(Ra_c\):** umbral crítico para el inicio de la convección estacionaria (depende de condiciones de contorno y geometría; clásico: \(Ra_c \approx 1708\) para placas rígidas e isoterma/inhibida).
+
+- **Número de Rayleigh:**
+  
+  \[
+  Ra = \frac{g\,\alpha\,\Delta T\,H^3}{\nu\,\kappa}
+  \]
+  
+  - **\(g\):** gravedad.
+  - **\(\alpha\):** coeficiente de expansión térmica del fluido.
+  - **\(\Delta T\):** diferencia de temperatura entre las placas.
+  - **\(H\):** espesor de la capa fluida.
+
+- **Qué describe en el experimento:**
+  - **Intensidad del forzamiento convectivo** relativo al umbral: \(\rho > 1\) implica convección; valores alrededor de 28 (clásico Lorenz) producen régimen caótico en el truncado.
+
+- **Cómo calcularlo:**
+  - **Medir:** \(\Delta T\) y \(H\).
+  - **Obtener:** \(\alpha, \nu, \kappa\) del fluido a la temperatura media.
+  - **Calcular:** \(Ra\) con la fórmula y luego \(\rho = Ra/Ra_c\) (usar \(Ra_c\) acorde a tus condiciones de contorno).
+
+---
+
+## Parámetro β: geometría y disipación del modo térmico vertical
+
+- **Origen y definición típica:**
+  - En la derivación modal de Lorenz, **β** depende del modo vertical elegido y la geometría/condiciones de contorno. Para el conjunto de modos estándar con placas rígidas y patrón convectivo básico, aparece el valor canónico:
+    
+    \[
+    \beta = \frac{8}{3}
+    \]
+  
+- **Forma general (según selección modal):**
+  - En derivaciones más generales, **β** se obtiene de cocientes de integrales de modos (funciones seno/coseno) y puede escribirse como **función del número de onda vertical y horizontal**. Un esquema común produce algo del tipo
+  
+    \[
+    \beta = \frac{4}{1 + a^2}
+    \]
+  
+    donde \(a\) es el cociente entre números de onda (aspecto del patrón), aunque la expresión exacta depende de la base modal elegida y las condiciones de contorno.
+
+- **Qué describe en el experimento:**
+  - **Pérdida/relajación** del componente de temperatura vertical dominante.
+  - **Efecto geométrico:** incorpora el “ancho” del rollo convectivo respecto al espesor de la capa.
+
+- **Cómo fijarlo en práctica:**
+  - Si reproduces el **modelo clásico de Lorenz**, utiliza \(\beta = 8/3\).
+  - Si ajustas a tu celda con **aspecto distinto** o condiciones no estándar, **deriva β** a partir de la proyección modal (o ajusta por data-fitting a series temporales de \(x,y,z\)).
+
+---
+
+## Resumen operativo para un experimento
+
+- **Mediciones necesarias:**
+  - **Fluido:** obtener \(\nu, \kappa, \alpha\) a la temperatura media.
+  - **Geometría:** medir \(H\) y (si calibras patrones) el tamaño horizontal dominante del rollo.
+  - **Forzamiento:** imponer y medir \(\Delta T\).
+
+- **Cálculos:**
+  - **Prandtl:** 
+    \[
+    \sigma = \frac{\nu}{\kappa}
+    \]
+  - **Rayleigh:** 
+    \[
+    Ra = \frac{g\,\alpha\,\Delta T\,H^3}{\nu\,\kappa}
+    \]
+  - **Rayleigh reducido:** 
+    \[
+    \rho = \frac{Ra}{Ra_c}
+    \]
+  - **Geometría (β):** usar \(\beta = 8/3\) en el modelo estándar o derivar según tu base modal.
+
+- **Valores de referencia (modelo clásico de Lorenz):**
+  - **\(\sigma = 10\), \(\rho = 28\), \(\beta = 8/3\)** producen el atractor extraño característico.
+
+---
+## Recomendaciones para ajuste y validación
+
+- **Control de unidades:** verificar que \(\nu\) y \(\kappa\) estén en \(\mathrm{m^2/s}\), \(\alpha\) en \(\mathrm{1/K}\), \(g\) en \(\mathrm{m/s^2}\), \(H\) en \(\mathrm{m}\), \(\Delta T\) en K.
+- **Estimación de \(Ra_c\):** usa \(1708\) para placas rígidas con contorno térmico ideal; cambia si tus condiciones difieren (placa superior libre, conductividad finita, etc.).
+- **Sensibilidad:** pequeñas variaciones en \(\rho\) y \(\sigma\) pueden mover el sistema de estacionario a caótico; documenta temperatura media y propiedades del fluido.
+- **Ajuste de β:** si tus datos empíricos muestran tiempos de relajación térmica distintos, considera ajustar β para capturar mejor tu celda.
