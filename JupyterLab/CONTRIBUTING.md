@@ -1,10 +1,9 @@
 # Contributing to JupyterHub / Contribuciones a JupyterHub
 
-Saludo de los desarrolladores. //
+Saludo de los desarrolladores y contacto de seguimiento. //
 Welcome! As a [Jupyter](https://jupyter.org) project,
 you can follow the [Jupyter contributor guide](https://jupyter.readthedocs.io/en/latest/contributing/content-contributor.html).
 
-Contacto de Seguimiento. //
 Make sure to also follow [Project Jupyter's Code of Conduct](https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md)
 for a friendly and welcoming collaborative environment.
 
