@@ -8,7 +8,7 @@ you can follow the [Jupyter contributor guide](https://jupyter.readthedocs.io/en
 Make sure to also follow [Project Jupyter's Code of Conduct](https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md)
 for a friendly and welcoming collaborative environment.
 
-Please see our documentation on / lee más sobre la la documentación en el enlace, por favor.
+Please see our documentation on / lee más sobre la documentación en el enlace, por favor.
 
 - [Setting up a development install](https://jupyterhub.readthedocs.io/en/latest/contributing/setup.html)
 - [Testing JupyterHub and linting code](https://jupyterhub.readthedocs.io/en/latest/contributing/tests.html)
@@ -49,5 +49,5 @@ The Jupyter Development Team is the set of all contributors to the Jupyter proje
 This includes all of the Jupyter subprojects.
 
 
-The team that coordinates JupyterHub subproject can be found here:/Contacto con el equipo de coordinacion de subproyectos JupyterHub:
+The team that coordinates JupyterHub subproject can be found here:/Contacto con el equipo de coordinación de subproyectos JupyterHub:
 https://compass.hub.jupyter.org/page/governance.html
