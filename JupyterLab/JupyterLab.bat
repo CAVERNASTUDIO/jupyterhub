@@ -7,8 +7,9 @@ echo ===========================================================================
 echo                                                                      JupyterLab
 echo ================================================================================================================================================
 echo                                                                                                              Ing. Erik Alejandro García Aparicio
-echo Copyrigth (c) - 2025 Erik García - All rigths reserved. 
+echo Copyright (c) - 2025 Erik García - All rights reserved. 
 echo Copyright (c) Jupyter Development Team.
 echo Distributed under the terms of the Modified BSD License.
 jupyter lab
 pause
+
