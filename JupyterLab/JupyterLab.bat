@@ -6,10 +6,11 @@ Title Jupyter Caverna Studio
 echo ================================================================================================================================================
 echo                                                                      JupyterLab
 echo ================================================================================================================================================
-echo                                                                                                              Ing. Erik Alejandro García Aparicio
-echo Copyright (c) - 2025 Erik García - All rights reserved. 
+REM User:_
+echo _                                                                                                                 
 echo Copyright (c) Jupyter Development Team.
 echo Distributed under the terms of the Modified BSD License.
 jupyter lab
 pause
+
 
