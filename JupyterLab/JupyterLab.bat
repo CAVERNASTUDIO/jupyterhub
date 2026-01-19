@@ -15,3 +15,16 @@ pause
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+REM copyright (c) - 2026 Erik Alejandro García Aparicio. All rights reserved.
