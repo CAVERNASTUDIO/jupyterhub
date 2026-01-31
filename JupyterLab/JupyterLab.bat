@@ -9,7 +9,7 @@ REM User:_
 echo _  
 echo Copyright (c) Jupyter Development Team.
 echo Distributed under the terms of the Modified BSD License.
-echo [E %DATE% %TIME% LocalApp]
+echo [N %DATE% %TIME% LocalApp]
 jupyter lab
 pause
 
@@ -29,4 +29,5 @@ pause
 
 
 REM copyright (c) - 2026 Erik Alejandro García Aparicio. All rights reserved.
+
 
