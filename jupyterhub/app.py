@@ -41,6 +41,7 @@ from traitlets import (
     Bool,
     Bytes,
     Dict,
+    Enum,
     Float,
     Instance,
     Integer,
@@ -67,7 +68,6 @@ from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
 
 # For faking stats
-from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
@@ -81,6 +81,7 @@ from .oauth.provider import make_provider
 from .objects import Hub, Server
 from .proxy import ConfigurableHTTPProxy, Proxy
 from .services.service import Service
+from .slugs import is_valid_safe_slug, safe_slug
 from .spawner import LocalProcessSpawner, Spawner
 from .traitlets import Callable, Command, EntryPointType, URLPrefix
 from .user import UserDict
@@ -237,7 +238,7 @@ class UpgradeDB(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         self.log = hub.log
-        dbutil.upgrade_if_needed(hub.db_url, log=self.log)
+        dbutil.upgrade_if_needed(hub.db_url, log=self.log, db_kwargs=hub.db_kwargs)
 
 
 class JupyterHub(Application):
@@ -428,6 +429,18 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    oauth_require_pkce = Bool(
+        False,
+        help=""""
+        Require PKCE validation of OAuth.
+
+        Requires PKCE validation.
+
+        Defaults to False for backward-compatibility.
+
+        .. versionadded:: 6.0
+        """,
+    )
     oauth_token_expires_in = Integer(
         help="""Expiry (in seconds) of OAuth access tokens.
 
@@ -732,6 +745,11 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will bind.
         Sets protocol, ip, base_url
+
+        For example:
+
+        - `http://:8000`
+        - `http+unix://%2Fsrv%2Fjupyterhub%2Fproxy.sock`
         """,
     ).tag(config=True)
 
@@ -740,7 +758,14 @@ class JupyterHub(Application):
         """ensure protocol field of bind_url matches ssl"""
         v = proposal['value']
         proto, sep, rest = v.partition('://')
-        if self.ssl_cert and proto != 'https':
+        if proto == 'unix+http':
+            self.log.warning(
+                "Using deprecated 'unix+http' protocol. Please use 'http+unix' instead."
+            )
+            return f'http+unix://{rest}'
+        elif proto == 'http+unix':
+            return v
+        elif self.ssl_cert and proto != 'https':
             return 'https' + sep + rest
         elif proto != 'http' and not self.ssl_cert:
             return 'http' + sep + rest
@@ -1037,7 +1062,7 @@ class JupyterHub(Application):
         to talk to the Hub.
 
         Only needs to be specified if the default hub URL is not
-        connectable (e.g. using a unix+http:// bind url).
+        connectable (e.g. using a http+unix:// bind url).
 
         .. seealso::
             JupyterHub.hub_connect_ip
@@ -1058,7 +1083,7 @@ class JupyterHub(Application):
         For example:
 
             "http://127.0.0.1:8081"
-            "unix+http://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
+            "http+unix://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
 
         .. versionadded:: 0.9
         """,
@@ -1078,6 +1103,14 @@ class JupyterHub(Application):
             Use hub_connect_url
         """,
     ).tag(config=True)
+
+    hub_socket_mode = Integer(
+        0o600,  # socket only read- and writeable by owner
+        help="""
+        If hub_bind_url is set to a unix socket path, use this mode for the socket's file permissions.
+        """,
+        config=True,
+    )
 
     hub_prefix = URLPrefix(
         '/hub/', help="The prefix for the hub server.  Always /base_url/hub/"
@@ -1355,6 +1388,26 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    allow_existing_invalid_named_servers = Enum(
+        ("allow-start", "allow-delete", "autorename"),
+        "allow-start",
+        help="""
+        How to handle existing named servers with invalid names.
+
+        JupyterHub 6 restricts the format of named servers. This controls how
+        named servers created with older versions are handled:
+
+          - allow-start: existing servers can be started, stopped or deleted by the owner
+          - allow-delete: existing servers can be stopped or deleted by the owner
+          - autorename: existing servers are automatically renamed at startup.
+
+            WARNING: This does not rename external resources linked to the named
+            server such as storage volumes. If the spawner does not keep track of
+            these resources they will be orphaned. Backup your database before
+            using this option. Running servers will not be renamed.
+        """,
+    ).tag(config=True)
+
     default_server_name = Unicode(
         "",
         help="""
@@ -1491,11 +1544,9 @@ class JupyterHub(Application):
             # assume sqlite, if given as a plain filename
             self.db_url = f'sqlite:///{new}'
 
-    db_kwargs = Dict(
-        help="""Include any kwargs to pass to the database connection.
+    db_kwargs = Dict(help="""Include any kwargs to pass to the database connection.
         See sqlalchemy.create_engine for details.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     upgrade_db = Bool(
         False,
@@ -1564,19 +1615,12 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    statsd_host = Unicode(
-        help="Host to send statsd metrics to. An empty string (the default) disables sending metrics."
-    ).tag(config=True)
-
-    statsd_port = Integer(
-        8125, help="Port on which to send statsd metrics about the hub"
-    ).tag(config=True)
-
-    statsd_prefix = Unicode(
-        'jupyterhub', help="Prefix to use for all metrics sent by jupyterhub to statsd"
-    ).tag(config=True)
-
     handlers = List()
+
+    config_role_names = List(
+        [],
+        help="Cached list of authenticator-managed roles loaded by load_managed_roles on startup",
+    )
 
     _log_formatter_cls = CoroutineLogFormatter
     http_server = None
@@ -1597,20 +1641,16 @@ class JupyterHub(Application):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    extra_log_file = Unicode(
-        help="""
+    extra_log_file = Unicode(help="""
         DEPRECATED: use output redirection instead, e.g.
 
         jupyterhub &>> /var/log/jupyterhub.log
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @observe('extra_log_file')
     def _log_file_changed(self, change):
         if change.new:
-            self.log.warning(
-                dedent(
-                    f"""
+            self.log.warning(dedent(f"""
                 extra_log_file is DEPRECATED in jupyterhub-0.8.2.
 
                 extra_log_file only redirects logs of the Hub itself,
@@ -1621,35 +1661,15 @@ class JupyterHub(Application):
                 output instead, e.g.
 
                     jupyterhub &>> '{change.new}'
-            """
-                )
-            )
+            """))
 
     extra_log_handlers = List(
         Instance(logging.Handler), help="Extra log handlers to set on JupyterHub logger"
     ).tag(config=True)
 
-    statsd = Any(
-        allow_none=False,
-        help="The statsd client, if any. A mock will be used if we aren't using statsd",
-    )
-
     shutdown_on_logout = Bool(
         False, help="""Shuts down all user servers on logout"""
     ).tag(config=True)
-
-    @default('statsd')
-    def _statsd(self):
-        if self.statsd_host:
-            import statsd
-
-            client = statsd.StatsClient(
-                self.statsd_host, self.statsd_port, self.statsd_prefix
-            )
-            return client
-        else:
-            # return an empty mock object!
-            return EmptyClass()
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -1699,14 +1719,12 @@ class JupyterHub(Application):
             handlers[i] = tuple(lis)
         return handlers
 
-    extra_handlers = List(
-        help="""
+    extra_handlers = List(help="""
         DEPRECATED.
 
         If you need to register additional HTTP endpoints
         please use services instead.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @observe("extra_handlers")
     def _extra_handlers_changed(self, change):
@@ -1846,9 +1864,7 @@ class JupyterHub(Application):
                 else:
                     # old b64 secret with a bunch of ignored bytes
                     secret = binascii.a2b_base64(text_secret)
-                    self.log.warning(
-                        dedent(
-                            """
+                    self.log.warning(dedent("""
                     Old base64 cookie-secret detected in {0}.
 
                     JupyterHub >= 0.8 expects 32B hex-encoded cookie secret
@@ -1857,9 +1873,7 @@ class JupyterHub(Application):
                     To generate a new secret:
 
                         openssl rand -hex 32 > "{0}"
-                    """
-                        ).format(secret_file)
-                    )
+                    """).format(secret_file))
             except Exception as e:
                 self.log.error(
                     "Refusing to run JupyterHub with invalid cookie_secret_file. "
@@ -1900,6 +1914,12 @@ class JupyterHub(Application):
                 remove_existing=self.recreate_internal_certs,
             )
 
+            # If any external CAs were specified in external_ssl_authorities
+            # add records of them to Certipy's store. Update before we build
+            # the internal trust bundles, so that any external CAs are included
+            # in the trust bundles.
+            self.internal_ssl_authorities.update(self.external_ssl_authorities)
+
             # Here we define how trust should be laid out per each component
             self.internal_ssl_components_trust = {
                 'hub-ca': list(self.internal_ssl_authorities.keys()),
@@ -1911,9 +1931,6 @@ class JupyterHub(Application):
 
             hub_name = 'hub-ca'
 
-            # If any external CAs were specified in external_ssl_authorities
-            # add records of them to Certipy's store.
-            self.internal_ssl_authorities.update(self.external_ssl_authorities)
             for authority, files in self.internal_ssl_authorities.items():
                 if files:
                     self.log.info("Adding CA for %s", authority)
@@ -2008,7 +2025,9 @@ class JupyterHub(Application):
             db_log_url = self.db_url
         self.log.debug("Connecting to db: %s", db_log_url)
         if self.upgrade_db:
-            dbutil.upgrade_if_needed(self.db_url, log=self.log)
+            dbutil.upgrade_if_needed(
+                self.db_url, log=self.log, db_kwargs=self.db_kwargs
+            )
 
         try:
             self.session_factory = orm.new_session_factory(
@@ -2062,6 +2081,7 @@ class JupyterHub(Application):
             public_host = self.subdomain_host
         hub_args = dict(
             base_url=self.hub_prefix,
+            socket_mode=self.hub_socket_mode,
             routespec=self.hub_routespec,
             public_host=public_host,
             certfile=self.internal_ssl_cert,
@@ -2204,18 +2224,14 @@ class JupyterHub(Application):
                     )
                     db.delete(user)
                 else:
-                    self.log.warning(
-                        dedent(
-                            """
+                    self.log.warning(dedent("""
                     You can set
                         c.Authenticator.delete_invalid_users = True
                     to automatically delete users from the Hub database that no longer pass
                     Authenticator validation,
                     such as when user accounts are deleted from the external system
                     without notifying JupyterHub.
-                    """
-                        )
-                    )
+                    """))
             else:
                 total_users += 1
                 # handle database upgrades where user.created is undefined.
@@ -2345,10 +2361,9 @@ class JupyterHub(Application):
             for role in managed_roles:
                 role['managed_by_auth'] = True
             roles_to_load.extend(managed_roles)
-
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
-        config_role_names = [r['name'] for r in roles_to_load]
+        self.config_role_names = [r['name'] for r in roles_to_load]
 
         default_roles_dict = {role["name"]: role for role in default_roles}
         init_roles = []
@@ -2367,7 +2382,7 @@ class JupyterHub(Application):
                 role_spec = merged_role_spec
 
             # Check for duplicates
-            if config_role_names.count(role_name) > 1:
+            if self.config_role_names.count(role_name) > 1:
                 raise ValueError(
                     f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
                 )
@@ -3108,8 +3123,7 @@ class JupyterHub(Application):
                 selectinload(orm.Spawner.user),
                 # make sure users' _other_ spawners are also loaded
                 selectinload(orm.Spawner.user, orm.User._orm_spawners),
-            )
-            .populate_existing()
+            ).populate_existing()
         ):
             orm_user = orm_spawner.user
             # instantiate Spawner wrapper and check if it's still alive
@@ -3149,6 +3163,7 @@ class JupyterHub(Application):
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
+            require_pkce=self.oauth_require_pkce,
         )
 
     def cleanup_oauth_clients(self):
@@ -3279,11 +3294,13 @@ class JupyterHub(Application):
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,
-            statsd=self.statsd,
             implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
+            allow_invalid_named_server_start=(
+                self.allow_existing_invalid_named_servers == "allow-start"
+            ),
             oauth_provider=self.oauth_provider,
             oauth_no_confirm_list=oauth_no_confirm_list,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
@@ -3302,6 +3319,7 @@ class JupyterHub(Application):
             eventlog=self.eventlog,
             app=self,
             xsrf_cookies=True,
+            config_role_names=self.config_role_names,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -3333,6 +3351,79 @@ class JupyterHub(Application):
 
         for schema in (Path(here) / "event-schemas").glob("**/*.yaml"):
             self.eventlog.register_event_schema(schema)
+
+    def check_invalid_named_servers(self):
+        """
+        Rename named servers that don't conform to the JupyterHub 6 restrictions
+        """
+        to_modify = []
+        cant_modify = []
+
+        user_namedserver_map = {}
+        for spawner in (
+            self.db.query(orm.Spawner)
+            .filter(orm.Spawner.name != "")
+            .options(selectinload(orm.Spawner.user))
+        ):
+            if spawner.user.name not in user_namedserver_map:
+                user_namedserver_map[spawner.user.name] = set()
+            user_namedserver_map[spawner.user.name].add(spawner.name)
+
+            if not is_valid_safe_slug(spawner.name):
+                if spawner.display_name:
+                    raise ValueError(
+                        f"Inconsistent named server: user='{spawner.user.name}' "
+                        f"server='{spawner.name}' has an invalid name indicating it "
+                        "was created with JupyterHub<6, but new property "
+                        f"display_name='{spawner.display_name}' is also set"
+                    )
+                if spawner.started:
+                    cant_modify.append(spawner)
+                else:
+                    to_modify.append(spawner)
+
+        if self.allow_existing_invalid_named_servers == "autorename":
+            for spawner in cant_modify:
+                self.log.error(
+                    "Named server user='%s' server='%s' has an "
+                    "invalid name but is already running, not renaming",
+                    spawner.user.name,
+                    spawner.name,
+                )
+
+            for spawner in to_modify:
+                safe_name = safe_slug(spawner.name, avoid_collisions=False)
+
+                # In the unlikely event that a user has multiple named servers
+                # with clashing safe_name generate a hashed safe_name.
+                # This is easier than adding a numeric suffix due to the edge
+                # case where len(safe_name) == max_length
+                if safe_name in user_namedserver_map[spawner.user.name]:
+                    safe_name = safe_slug(spawner.name, avoid_collisions=True)
+                user_namedserver_map[spawner.user.name].add(safe_name)
+
+                self.log.info(
+                    "Renaming server user='%s' server='%s' to '%s'",
+                    spawner.user.name,
+                    spawner.name,
+                    safe_name,
+                )
+                spawner.display_name = spawner.name
+                spawner.name = safe_name
+
+            self.db.commit()
+
+            if not to_modify and not cant_modify:
+                self.log.debug("All named servers have valid names")
+
+        elif cant_modify or to_modify:
+            self.log.warning(
+                "%d named servers have names that do not comply with restrictions "
+                "introduced in JupyterHub 6. See "
+                "https://jupyterhub.readthedocs.io/en/6.0.0/howto/upgrading-v6.html "
+                "for migration instructions.",
+                len(cant_modify) + len(to_modify),
+            )
 
     def write_pid_file(self):
         pid = os.getpid()
@@ -3418,6 +3509,8 @@ class JupyterHub(Application):
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
+
+        self.check_invalid_named_servers()
 
         # init_spawners can take a while
         init_spawners_timeout = self.init_spawners_timeout
@@ -3593,8 +3686,6 @@ class JupyterHub(Application):
                 spawner.last_activity = dt
             if (now - user.last_activity).total_seconds() < self.active_user_window:
                 active_users_count += 1
-        self.statsd.gauge('users.running', users_count)
-        self.statsd.gauge('users.active', active_users_count)
 
         try:
             self.db.commit()
@@ -3761,10 +3852,12 @@ class JupyterHub(Application):
         )
         bind_url = urlparse(self.hub.bind_url)
         try:
-            if bind_url.scheme.startswith('unix+'):
+            if bind_url.scheme.startswith('http+unix'):
                 from tornado.netutil import bind_unix_socket
 
-                socket = bind_unix_socket(unquote(bind_url.netloc))
+                socket = bind_unix_socket(
+                    unquote(bind_url.netloc), mode=self.hub.socket_mode
+                )
                 self.http_server.add_socket(socket)
             else:
                 ip = bind_url.hostname

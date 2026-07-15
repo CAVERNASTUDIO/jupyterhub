@@ -31,6 +31,8 @@ from .._xsrf_utils import (
     get_xsrf_token,
 )
 from ..metrics import (
+    CSP_REPORT_COUNT,
+    LOGIN_DURATION_SECONDS,
     PROXY_ADD_DURATION_SECONDS,
     PROXY_DELETE_DURATION_SECONDS,
     RUNNING_SERVERS,
@@ -38,6 +40,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS,
     SERVER_STOP_DURATION_SECONDS,
     TOTAL_USERS,
+    LoginStatus,
     ProxyDeleteStatus,
     ServerPollStatus,
     ServerSpawnStatus,
@@ -51,6 +54,7 @@ from ..utils import (
     get_accepted_mimetype,
     get_browser_protocol,
     maybe_future,
+    safe_log,
     url_escape_path,
     url_path_join,
     utcnow,
@@ -180,10 +184,6 @@ class BaseHandler(RequestHandler):
         return self.settings['proxy']
 
     @property
-    def statsd(self):
-        return self.settings['statsd']
-
-    @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
 
@@ -270,20 +270,25 @@ class BaseHandler(RequestHandler):
         """
         # cases:
         # 1. logged in, session id (session_id:user_id)
-        # 2. logged in, no session id (anonymous_id:user_id)
+        # 2. logged in, no session id (shouldn't happen!) sets new session id, same as 1.
         # 3. not logged in, session id (session_id:anonymous_id)
         # 4. no cookies at all, use single anonymous value (:anonymous_id)
         session_id = self.get_session_cookie()
         if self.current_user:
             if isinstance(self.current_user, User):
                 user_id = self.current_user.cookie_id
+                if not session_id:
+                    # this shouldn't happen if cookie-authenticated
+                    self.log.warning(
+                        "session id not set for %s, setting a new one",
+                        self.current_user.name,
+                    )
+                    self.set_session_cookie()
+                    session_id = self._session_id
             else:
                 # this shouldn't happen, but may if e.g. a Service attempts to fetch a page,
                 # which usually won't work, but this method should not be what raises
-                user_id = ""
-            if not session_id:
-                # no session id, use non-portable anonymous id
-                session_id = _anonymous_xsrf_id(self)
+                user_id = session_id = ""
         else:
             # not logged in yet, use non-portable anonymous id
             user_id = _anonymous_xsrf_id(self)
@@ -490,6 +495,7 @@ class BaseHandler(RequestHandler):
             # have cookie, but it's not valid. Clear it and start over.
             clear()
             return
+
         # update user activity
         if self._record_activity(user):
             self.db.commit()
@@ -503,7 +509,12 @@ class BaseHandler(RequestHandler):
 
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
-        return self._user_for_cookie(self.hub.cookie_name)
+        user = self._user_for_cookie(self.hub.cookie_name)
+        if user and not self.get_session_cookie():
+            # make sure session cookie is set for cookie-authenticated requests
+            self.log.debug("Setting new session id for %s", user.name)
+            self.set_session_cookie()
+        return user
 
     async def get_current_user(self):
         """get current username"""
@@ -692,6 +703,8 @@ class BaseHandler(RequestHandler):
 
         Returns None if no session id is stored
         """
+        if hasattr(self, "_session_id"):
+            return self._session_id
         return self.get_cookie(SESSION_COOKIE_NAME, None)
 
     def set_session_cookie(self):
@@ -803,6 +816,8 @@ class BaseHandler(RequestHandler):
             # treat absolute URLs for our host as absolute paths:
             # below, redirects that aren't strictly paths are rejected
             next_url = parsed_next_url.path
+            # make sure path is handled as a path, not a `//host/path` url
+            next_url = "/" + next_url.lstrip("/")
             if parsed_next_url.query:
                 next_url = next_url + '?' + parsed_next_url.query
             if parsed_next_url.fragment:
@@ -908,6 +923,7 @@ class BaseHandler(RequestHandler):
         if isinstance(authenticated, str):
             authenticated = {'name': authenticated}
         username = authenticated['name']
+        user_info = authenticated.get('user_info', None)
         auth_state = authenticated.get('auth_state')
         admin = authenticated.get('admin')
         refreshing = user is not None
@@ -960,24 +976,27 @@ class BaseHandler(RequestHandler):
 
     async def login_user(self, data=None):
         """Login a user"""
-        auth_timer = self.statsd.timer('login.authenticate').start()
+        login_start_time = time.perf_counter()
         authenticated = await self.authenticate(data)
-        auth_timer.stop(send=False)
 
         if authenticated:
             user = await self.auth_to_user(authenticated)
             self.set_login_cookie(user)
-            self.statsd.incr('login.success')
-            self.statsd.timing('login.authenticate.success', auth_timer.ms)
+            LOGIN_DURATION_SECONDS.labels(status=LoginStatus.success).observe(
+                time.perf_counter() - login_start_time
+            )
 
             self.log.info("User logged in: %s", user.name)
             user._auth_refreshed = time.monotonic()
             return user
         else:
-            self.statsd.incr('login.failure')
-            self.statsd.timing('login.authenticate.failure', auth_timer.ms)
-            self.log.warning(
-                "Failed login for %s", (data or {}).get('username', 'unknown user')
+            log_username = username = (data or {}).get('username', 'unknown user')
+            # username failed login, don't log full invalid user input
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
+            self.log.warning("Failed login for %r", log_username)
+            LOGIN_DURATION_SECONDS.labels(status=LoginStatus.failure).observe(
+                time.perf_counter() - login_start_time
             )
 
     # ---------------------------------------------------------------
@@ -1004,7 +1023,9 @@ class BaseHandler(RequestHandler):
     def active_server_limit(self):
         return self.settings.get('active_server_limit', 0)
 
-    async def spawn_single_user(self, user, server_name='', options=None):
+    async def spawn_single_user(
+        self, user, server_name='', display_name='', options=None
+    ):
         # in case of error, include 'try again from /hub/home' message
         if self.authenticator.refresh_pre_spawn:
             auth_user = await self.refresh_auth(user, force=True)
@@ -1020,9 +1041,7 @@ class BaseHandler(RequestHandler):
 
         if server_name:
             if '/' in server_name:
-                error_message = (
-                    f"Invalid server_name (may not contain '/'): {server_name}"
-                )
+                error_message = f"Invalid server_name (may not contain '/'): {safe_log(server_name)}"
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
             user_server_name = f'{user.name}:{server_name}'
@@ -1096,7 +1115,7 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Initiating spawn for %s", user_server_name)
 
-        spawn_future = user.spawn(server_name, options, handler=self)
+        spawn_future = user.spawn(server_name, display_name, options, handler=self)
 
         self.log.debug(
             "%i%s concurrent spawns",
@@ -1126,7 +1145,6 @@ class BaseHandler(RequestHandler):
             self.log.info(
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
-            self.statsd.timing('spawner.success', (toc - tic) * 1000)
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -1242,8 +1260,6 @@ class BaseHandler(RequestHandler):
             ).observe(time.perf_counter() - poll_start_time)
 
             if status is not None:
-                toc = IOLoop.current().time()
-                self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                 SERVER_SPAWN_DURATION_SECONDS.labels(
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
@@ -1365,7 +1381,6 @@ class BaseHandler(RequestHandler):
                 self.log.info(
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
                 )
-                self.statsd.timing('spawner.stop', (toc - tic) * 1000)
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
@@ -1501,6 +1516,12 @@ class BaseHandler(RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         """render custom error pages"""
+        # it is possible (rare) to send an error before .prepare() is called
+        # this is generally only for malformed requests at the HTTP-level
+        if not hasattr(self, '_jupyterhub_user'):
+            self._jupyterhub_user = None
+            self._resolve_roles_and_scopes()
+
         exc_info = kwargs.get('exc_info')
         message = ''
         message_html = ''
@@ -1898,7 +1919,6 @@ class UserUrlHandler(BaseHandler):
             target = url_concat(target, {'redirects': 1})
 
         self.redirect(target)
-        self.statsd.incr('redirects.user_after_login')
 
 
 class UserRedirectHandler(BaseHandler):
@@ -1969,8 +1989,8 @@ class CSPReportHandler(BaseHandler):
             "Content security violation: %s",
             self.request.body.decode('utf8', 'replace'),
         )
-        # Report it to statsd as well
-        self.statsd.incr('csp_report')
+        # Report it to metrics as well
+        CSP_REPORT_COUNT.inc()
 
 
 class AddSlashHandler(BaseHandler):

@@ -306,19 +306,18 @@ paths:
                   format: date-time
                 servers:
                   type: object
-                  properties:
-                    <server name>:
-                      required:
-                        - last_activity
-                      type: object
-                      properties:
-                        last_activity:
-                          type: string
-                          description: |
-                            Timestamp of last-seen activity on this server.
-                          format: date-time
-                      description: |
-                        Activity for a single server.
+                  additionalProperties:
+                    type: object
+                    required:
+                      - last_activity
+                    properties:
+                      last_activity:
+                        type: string
+                        description: |
+                          Timestamp of last-seen activity on this server.
+                        format: date-time
+                    description: |
+                      Activity for a single server.
                   description: |
                     Register activity for specific servers by name.
                     The keys of this dict are the names of servers.
@@ -1638,6 +1637,14 @@ components:
           description: the string 'user' to distinguish from 'service'
           enum:
             - user
+        user_info:
+          type: object
+          properties: {}
+          description: |
+            Optional dict containing optional user profile information
+            (e.g. name, display_name, initials, avatar_url, color).
+
+            Added in JupyterHub 6.0
         admin:
           type: boolean
           description: Whether the user is an admin
@@ -1685,8 +1692,16 @@ components:
       properties:
         name:
           type: string
-          description: The server's name. The user's default server has an empty
-            name ('')
+          description: |
+            The server's name. The user's default server has an empty name ('').
+
+            Changed in JupyterHub 6.0:
+            New servers are restricted to characters [a-z0-9] and single hyphens;
+            must start with [a-z] and end with [a-z0-9]; maximum length 30 characters.
+            Named servers created in older versions of JupyterHub may not follow these restrictions.
+        display_name:
+          type: string
+          description: The server's display name. Added in JupyterHub 6.0.
         ready:
           type: boolean
           description: |
@@ -2138,6 +2153,7 @@ components:
             servers: Start and stop user servers.
             read:servers: Read users’ names and their server models (excluding 
               the server state).
+            start:servers: Start users' servers. (added in JupyterHub 6)
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.
             read:tokens: Read user tokens.

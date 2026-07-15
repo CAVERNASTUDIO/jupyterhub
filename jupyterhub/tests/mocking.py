@@ -38,7 +38,7 @@ from urllib.parse import urlparse
 from pamela import PAMError
 from sqlalchemy import event
 from tornado.httputil import url_concat
-from traitlets import Bool, Dict, default
+from traitlets import Bool, Dict, Unicode, default
 
 from .. import metrics, orm, roles
 from ..app import JupyterHub
@@ -89,7 +89,9 @@ class MockSpawner(SimpleLocalProcessSpawner):
     def start(self):
         # preserve any JupyterHub env in mock spawner
         for key in os.environ:
-            if 'JUPYTERHUB' in key and key not in self.env_keep:
+            if key in self.env_keep:
+                continue
+            if any(substring in key for substring in ["JUPYTERHUB", "COVERAGE"]):
                 self.env_keep.append(key)
 
         if self.use_this_api_token:
@@ -106,7 +108,7 @@ class SlowSpawner(MockSpawner):
     _start_future = None
 
     async def start(self):
-        (ip, port) = await super().start()
+        ip, port = await super().start()
         if self._start_future is not None:
             await self._start_future
         else:
@@ -151,10 +153,28 @@ class SlowBadSpawner(MockSpawner):
         raise RuntimeError("I don't work!")
 
 
+class CustomInputSpawner(SlowSpawner):
+    """A spawner that can be used to test custom form inputs by requesting /env"""
+
+    form_input = Unicode()
+
+    def get_env(self):
+        env = super().get_env()
+        env["FORM_INPUT"] = self.form_input
+        return env
+
+
 class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
 
-    options_form = "IMAFORM"
+    energy = Unicode(help="field that is set as an environment variable for testing")
+
+    # Only one of the form fields is used in browser UI tests
+    options_form = """
+        <input aria-label="energy" name="energy" type="text" value=""/>
+    """
+
+    apply_user_options = {"energy": "energy"}
 
     def options_from_form(self, form_data):
         options = {'notspecified': 5}
@@ -168,6 +188,11 @@ class FormSpawner(MockSpawner):
         if 'illegal_argument' in form_data:
             raise ValueError("You are not allowed to specify 'illegal_argument'")
         return options
+
+    def get_env(self):
+        env = super().get_env()
+        env["ENERGY"] = self.energy
+        return env
 
 
 class FalsyCallableFormSpawner(FormSpawner):
@@ -239,6 +264,7 @@ class MockHub(JupyterHub):
     external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
+        self.socket = kwargs.get('unix_socket', False)
         if 'internal_certs_location' in kwargs:
             cert_location = kwargs['internal_certs_location']
             kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
@@ -259,6 +285,8 @@ class MockHub(JupyterHub):
 
     @default('bind_url')
     def _default_bind_url(self):
+        if self.socket:
+            return f"http+unix://{self.socket}"
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:
@@ -344,6 +372,8 @@ class MockHub(JupyterHub):
         self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         if 'mysql' in self.db_url:
             self.db_kwargs['connect_args'] = {'auth_plugin': 'mysql_native_password'}
+        if self.subdomain_host:
+            self.public_url = self.subdomain_host
         await super().initialize([])
 
         # add an initial user

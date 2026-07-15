@@ -14,30 +14,48 @@ ci:
   autoupdate_schedule: monthly
 
 repos:
-  # autoformat and lint Python code
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.7
+  # Autoformat: Python code, syntax patterns are modernized
+  - repo: https://github.com/asottile/pyupgrade
+    rev: 75992aaa40730136014f34227e0135f63fc951b4 # frozen: v3.21.2
     hooks:
-      - id: ruff
-        types_or:
-          - python
-          - jupyter
-        args: ["--fix", "--show-fixes"]
-      - id: ruff-format
-        types_or:
-          - python
-          - jupyter
+      - id: pyupgrade
+
+  # Autoformat: Python lint fixes
+  - repo: https://github.com/PyCQA/autoflake
+    rev: 2d3853a9f31d97783fb2e181d41cd82a6babd666 # frozen: v2.3.3
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+
+  # Autoformat: python imports
+  - repo: https://github.com/pycqa/isort
+    rev: dac090ce4d9ee313d086e2e89ab1acb8c2664fa1 # frozen: 9.0.0a3
+    hooks:
+      - id: isort
+
+  # Autoformat: Python code
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 4160603246a6b365d4a2af661c6d71b0a0f50478 # frozen: 26.5.1
+    hooks:
+      - id: black
+
+  # Lint: Python code
+  - repo: https://github.com/PyCQA/flake8
+    rev: d93590f5be797aabb60e3b09f2f52dddb02f349f # frozen: 7.3.0
+    hooks:
+      - id: flake8
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.7.3
+    rev: 39e2973981e6d2f9b6c543b0086a2d2393abdc89 # frozen: v3.9.4
     hooks:
       - id: prettier
         exclude: .*/templates/.*|docs/source/_static/rest-api.yml|docs/source/rbac/scope-table.md
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: v1.36.4
+    rev: df39c89b663e0ef6292e461bb5fb283ddd0680dd # frozen: v1.40.3
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
@@ -47,9 +65,17 @@ repos:
         files: ".*templates/.*.html"
         types_or: ["html"]
 
+  # github actions security checks
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: e3eebf65325ccc992422292cb7a4baee967cf815 # frozen: v1.26.1
+    hooks:
+      - id: zizmor
+        args:
+          - --fix
+
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: end-of-file-fixer
         exclude: share/jupyterhub/static/js/admin-react.js

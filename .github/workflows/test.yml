@@ -36,8 +36,8 @@ permissions:
 jobs:
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     strategy:
       # Keep running even if one variation of the job fail
@@ -126,12 +126,15 @@ jobs:
           fi
           if [ "${{ matrix.ssl }}" == "ssl" ]; then
               echo "SSL_ENABLED=1" >> $GITHUB_ENV
+              # limit tests to those relevant to ssl
+              echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS" -m ssl >> "${GITHUB_ENV}"
+
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
               echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
               echo "PGUSER=test_user" >> $GITHUB_ENV
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=postgresql+psycopg://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.serverextension }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
@@ -141,23 +144,23 @@ jobs:
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v6
-      # NOTE: actions/setup-node@v6 make use of a cache within the GitHub base
-      #       environment and setup in a fraction of a second.
-      - name: Install Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
         with:
-          node-version: "20"
+          persist-credentials: false
+
+      - name: Install Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24"
+
       - name: Install Javascript dependencies
         run: |
           npm install
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v6 make use of a cache within the GitHub base
-      #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "${{ matrix.python }}"
           cache: pip
@@ -199,7 +202,7 @@ jobs:
               pip install mysqlclient
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
-              pip install psycopg2-binary
+              pip install psycopg[binary]
           fi
           if [ "${{ matrix.serverextension }}" != "" ]; then
             pip install 'jupyter-server>=2'
@@ -247,6 +250,8 @@ jobs:
               DB=postgres bash ci/docker-db.sh
               DB=postgres bash ci/init-db.sh
           fi
+          # limit db runs to subset of tests
+          echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m db" >> "${GITHUB_ENV}"
 
       - name: Configure browser tests
         if: matrix.browser
@@ -260,4 +265,4 @@ jobs:
         run: |
           pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5

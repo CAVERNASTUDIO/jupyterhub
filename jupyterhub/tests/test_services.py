@@ -23,12 +23,15 @@ mockservice_cmd = [sys.executable, mockservice_py]
 
 @asynccontextmanager
 async def external_service(app, name='mockservice'):
-    env = {
-        'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
-        'JUPYTERHUB_SERVICE_NAME': name,
-        'JUPYTERHUB_API_URL': url_path_join(app.hub.url, 'api/'),
-        'JUPYTERHUB_SERVICE_URL': f'http://127.0.0.1:{random_port()}',
-    }
+    env = os.environ.copy()
+    env.update(
+        {
+            'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
+            'JUPYTERHUB_SERVICE_NAME': name,
+            'JUPYTERHUB_API_URL': url_path_join(app.hub.url, 'api/'),
+            'JUPYTERHUB_SERVICE_URL': f'http://127.0.0.1:{random_port()}',
+        }
+    )
     proc = Popen(mockservice_cmd, env=env)
     try:
         await wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
@@ -65,8 +68,8 @@ async def test_proxy_service(app, mockservice_url):
     service = mockservice_url
     name = service.name
     await app.proxy.get_all_routes()
-    url = public_url(app, service)
-    assert url.endswith("/")
+    url = base_url = public_url(app, service)
+    assert base_url.endswith("/")
     url += "foo"
     r = await async_requests.get(url, allow_redirects=False)
     path = f'/services/{name}/foo'
@@ -74,6 +77,16 @@ async def test_proxy_service(app, mockservice_url):
 
     assert r.status_code == 200
     assert r.text.endswith(path)
+
+    r = await async_requests.get(url_path_join(base_url, "env"))
+    r.raise_for_status()
+    env = r.json()
+    if app.subdomain_host or app.public_url:
+        assert "JUPYTERHUB_PUBLIC_URL" in env
+        assert env["JUPYTERHUB_PUBLIC_URL"] == public_url(app, service)
+    if app.public_url:
+        assert "JUPYTERHUB_PUBLIC_HUB_URL" in env
+        assert env["JUPYTERHUB_PUBLIC_HUB_URL"] == public_url(app) + "hub/"
 
 
 @skip_if_ssl

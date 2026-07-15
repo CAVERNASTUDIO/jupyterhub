@@ -303,6 +303,7 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
+    user_info = Column(JSONDict)
     admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=utcnow)
     last_activity = Column(DateTime, nullable=True)
@@ -412,6 +413,7 @@ class Spawner(Base):
 
     state = Column(JSONDict)
     name = Column(Unicode(255))
+    display_name = Column(Unicode(255))
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
@@ -1271,6 +1273,10 @@ class OAuthCode(Expiring, Base):
     )
 
     scopes = Column(JSONList, default=[])
+
+    # PKCE added in 5.3
+    code_challenge = Column(Unicode(255), nullable=True)
+    code_challenge_method = Column(Unicode(64), nullable=True)
 
     @staticmethod
     def now():

@@ -180,7 +180,7 @@ JupyterHub uses distinct xsrf tokens stored in cookies on each server path to at
 This has limitations because not all requests are protected by these XSRF tokens,
 and unless additional measures are taken, the XSRF tokens from other user prefixes may be retrieved.
 
-[Same-Origin Policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
+[Same-Origin Policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy
 
 For example:
 
@@ -267,7 +267,4 @@ A handy website for testing your deployment is
 ## Vulnerability reporting
 
 If you believe you have found a security vulnerability in JupyterHub, or any
-Jupyter project, please report it to
-[security@ipython.org](mailto:security@ipython.org). If you prefer to encrypt
-your security reports, you can use [this PGP public
-key](https://jupyter.org/assets/ipython_security.asc).
+Jupyter project, please report it by following the guide on https://jupyter.org/security.

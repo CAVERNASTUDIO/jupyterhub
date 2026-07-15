@@ -16,7 +16,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-- [Data 8](https://www.data8.org/)
+- [Data 8](https://data8.org/)
   - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](https://www.nersc.gov/)
@@ -64,14 +64,14 @@ easy to do with RStudio too.
 Within CERN, there are two noteworthy JupyterHub deployments in operation:
 
 - [SWAN](https://swan.web.cern.ch/swan/), which stands for Service for Web based Analysis, serves as an interactive data analysis platform primarily utilized at CERN.
-- [VRE](https://vre-hub.github.io/), which stands for Virtual Research Environment, is an analysis platform developed within the [EOSC Project](https://eoscfuture.eu/) to cater to the needs of scientific communities involved in European projects.
+- [VRE](https://vre-hub.github.io/) (Virtual Research Environment) is an analysis platform developed as part of [EOSC](https://eosc.eu/) to cater to the needs of scientific communities involved in European projects.
 
 ### Chameleon
 
 [Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
 
 - [Shared JupyterHub](https://jupyter.chameleoncloud.org): provides a common "workbench" environment for any Chameleon user.
-- [Trovi](https://www.chameleoncloud.org/experiment/share): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
+- [Trovi](https://trovi.chameleoncloud.org/dashboard/): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
 
 ### ETH Zurich
 
@@ -104,10 +104,6 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 ### Michigan State University
 
 - [Setting up JupyterHub](https://mediaspace.msu.edu/media/Setting+Up+Your+JupyterHub+Password/1_hgv13aag/11980471)
-
-### University of Minnesota
-
-- [JupyterHub Inside HPC](https://insidehpc.com/tag/jupyterhub/)
 
 ### University of Missouri
 
@@ -147,6 +143,31 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 - What's new in Jupyter Notebooks @[Elucidata](https://www.elucidata.io/):
   - [Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE](https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d)
 
+### Vrije Universiteit Amsterdam
+
+- [hub.compute.vu.nl](https://hub.compute.vu.nl/)
+
+For resource-heavy coursework and research projects, Vrije Universiteit Amsterdam provides multiple bare-metal _Compute Servers_, made accessible with JupyterHub.
+More than 10 general-purpose, and more than 20 course-specific environments are pre-built and ready for use.
+
+> ‘Class is so much faster now. Students generally finish three times faster than in previous years, with few questions for teachers.
+> We can now focus more on the content, rather than the technical part.’
+>
+> From: [You can (quickly) count on JupyterHub - vu.nl](https://vu.nl/en/news/2024/you-can-quickly-count-on-jupyterhub)
+
+### bwJupyter for Teaching
+
+[bwJupyter](https://www.bwjupyter.de) is a collaboration between the [Karlsruhe Institute of Technology (KIT)](https://www.kit.edu/) and the [University of Stuttgart](https://www.uni-stuttgart.de/).
+The project was funded by the Baden-Württemberg Ministry of Science, Research and Arts, and aims to provide a central JupyterHub for all universities in the state of Baden-Württemberg.
+In its first year of operation, over 7.700 active users from 40 universities were registered.
+
+Based on the Kubernetes deployment using [Z2JH](https://z2jh.jupyter.org/en/stable/), bwJupyter provides additional features to support lecturers and students, e.g.:
+
+- Lecturers can create their own profiles to share files with their students.
+- Students can form groups to collaborate in real-time using [jupyter-collaboration](https://jupyterlab-realtime-collaboration.readthedocs.io/en/latest/).
+- JupyterHub covers the assignment and submission lifecycles using [grader-service](https://github.com/TU-Wien-dataLAB/grader-service).
+- AI assistant helps students to understand their errors using [jupyter-ai](https://jupyter-ai.readthedocs.io/en/v3/).
+
 ## Service Providers
 
 ### AWS
@@ -155,7 +176,6 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 
 ### Google Cloud Platform
 
-- [Using Tensorflow and JupyterHub in Classrooms](https://cloud.google.com/solutions/using-tensorflow-jupyterhub-classrooms)
 - [using-tensorflow-and-jupyterhub blog post](https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html)
 
 ### Everware

@@ -823,6 +823,11 @@ async def test_login_strip(app, form_user, auth_user, form_password):
         (False, '//other.domain', '', None),
         (False, '///other.domain/triple', '', None),
         (False, '\\\\other.domain/backslashes', '', None),
+        # preserve path when host matches
+        (False, 'HOST/other.domain/', '/other.domain/', None),
+        (False, 'HOST//other.domain/', '/other.domain/', None),
+        (False, 'HOST///other.domain/', '/other.domain/', None),
+        (False, 'HOST////other.domain/', '/other.domain/', None),
         # params are handled correctly (ignored if ?next= specified)
         (
             True,
@@ -836,10 +841,16 @@ async def test_login_strip(app, form_user, auth_user, form_password):
     ],
 )
 async def test_login_redirect(app, running, next_url, location, params):
+    if 'HOST' in next_url:
+        next_url = next_url.replace('HOST', public_host(app))
+        print(next_url)
+
     cookies = await app.login_user('river')
     user = app.users['river']
     if location:
-        location = ujoin(app.base_url, location)
+        if not urlparse(next_url).netloc:
+            # add base url to expectation if next_url doesn't include host
+            location = ujoin(app.base_url, location)
     elif running:
         # location not specified,
         location = user.url
@@ -1059,17 +1070,17 @@ async def test_login_no_allowed_adds_user(app):
     assert mock_add_user.mock_calls == [mock.call(user)]
 
 
-async def test_static_files(app):
+@pytest.mark.parametrize('http_method', ['head', 'get'])
+async def test_static_files(app, http_method):
+    send_request = getattr(async_requests, http_method)
     base_url = ujoin(public_host(app), app.hub.base_url)
-    r = await async_requests.get(ujoin(base_url, 'logo'))
+    r = await send_request(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = await async_requests.get(
-        ujoin(base_url, 'static', 'images', 'jupyterhub-80.png')
-    )
+    r = await send_request(ujoin(base_url, 'static', 'images', 'jupyterhub-80.png'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = await async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
+    r = await send_request(ujoin(base_url, 'static', 'css', 'style.min.css'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'text/css'
 
@@ -1461,3 +1472,67 @@ async def test_spawn_fails_custom_message(app, user, kind, speed):
             assert "unhandle me" not in error.text
         else:
             raise ValueError(f"unexpected {kind=}")
+
+
+async def test_session_id(app):
+    # `cookies` is our request cookies
+    # `r.cookies` is the _new_ cookies set by any given response
+    cookies = await app.login_user('ursula')
+    # session id set on login
+    assert 'jupyterhub-session-id' in cookies
+    # cookie-authenticated request for any page without a session id
+    # sets a new session id cookie
+    cookies.pop("jupyterhub-session-id")
+    r = await async_requests.get(ujoin(public_url(app), "hub/token"), cookies=cookies)
+    assert r.ok
+    # requesting token page sets new session id and xsrf token
+    assert "_xsrf" in r.cookies
+    assert "jupyterhub-session-id" in r.cookies
+    for cookie in r.cookies:
+        cookies.pop(cookie.name, None)
+        cookies[cookie.name] = cookie.value
+
+    # second request for same page doesn't set any new cookies
+    r = await async_requests.get(ujoin(public_url(app), "hub/token"), cookies=cookies)
+    assert r.ok
+    assert not r.cookies
+
+    # POST a token with the cookies
+    r = await async_requests.post(
+        ujoin(public_url(app), f"hub/api/users/ursula/tokens?_xsrf={cookies['_xsrf']}"),
+        cookies=cookies,
+    )
+    assert r.ok
+    # request shouldn't set any new cookies
+    assert not r.cookies
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        # test one page, one api handler
+        # since they have separate write_error
+        "login",
+        "api/users",
+    ],
+)
+async def test_malformed_form(app, caplog, path):
+    r = await async_requests.post(
+        ujoin(public_url(app), "hub", path),
+        headers={"Content-Type": "multipart/form-data; boundary=---BOUNDARY"},
+        data="\r\n".join(
+            [
+                "---BOUNDARY",
+                "field1=value1",
+                "field2=value2",
+                "---BOUNDARY--",
+                "",
+            ]
+        ),
+    )
+    # tornado might validate form-data before calling prepare,
+    # which would lead to 400.
+    # seems to be a change in 6.5.0, but this is an implementation detail
+    # the main goal is no traceback.
+    assert r.status_code in {400, 403}
+    assert "Traceback" not in caplog.text

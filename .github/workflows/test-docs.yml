@@ -39,29 +39,32 @@ env:
 
 jobs:
   validate-rest-api-definition:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
         with:
-          node-version: "20"
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "22"
           cache: npm
 
       - name: Validate REST API definition
         run: |
-          npx @redocly/cli lint
+          npx @redocly/cli@2.20 lint
 
   test-docs:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
         with:
+          persist-credentials: false
           # make rediraffecheckdiff requires git history to compare current
           # commit with the main branch and previous releases.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -99,22 +102,24 @@ jobs:
       - name: check redirects for this PR
         if: github.event_name == 'pull_request'
         run: |
-          cd docs
-          export REDIRAFFE_BRANCH=origin/${{ github.base_ref }}
           make rediraffecheckdiff
+        env:
+          REDIRAFFE_BRANCH: origin/${{ github.base_ref }}
+        working-directory: docs
 
       # this should check currently published 'stable' links for redirects
       - name: check redirects since last release
         if: github.repository == 'jupyterhub/jupyterhub'
         run: |
-          cd docs
           export REDIRAFFE_BRANCH=$(git describe --tags --abbrev=0)
           make rediraffecheckdiff
+        working-directory: docs
 
       # longer-term redirect check (fixed version) for older links
       - name: check redirects since 3.0.0
         if: github.repository == 'jupyterhub/jupyterhub'
         run: |
-          cd docs
-          export REDIRAFFE_BRANCH=3.0.0
           make rediraffecheckdiff
+        env:
+          REDIRAFFE_BRANCH: "3.0.0"
+        working-directory: docs
